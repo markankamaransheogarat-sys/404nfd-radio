@@ -87,6 +87,20 @@ db.exec(`
     telegram_id INTEGER,
     started_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS library_tracks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    artist TEXT,
+    thumbnail_url TEXT,
+    duration_seconds INTEGER NOT NULL DEFAULT 0,
+    file_path TEXT NOT NULL,
+    added_by INTEGER,
+    play_count INTEGER NOT NULL DEFAULT 0,
+    last_played_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Lightweight migration: CREATE TABLE IF NOT EXISTS above only shapes brand-new tables, so

@@ -19,19 +19,29 @@ function buildCaption(track: NowPlayingDto): string {
 
 async function announce(botToken: string, channelId: string, track: NowPlayingDto): Promise<void> {
   const caption = buildCaption(track);
-  const useSendPhoto = !!track.thumbnailUrl;
-  const endpoint = `https://api.telegram.org/bot${botToken}/${useSendPhoto ? "sendPhoto" : "sendMessage"}`;
-  const body = useSendPhoto
-    ? { chat_id: channelId, photo: track.thumbnailUrl, caption }
-    : { chat_id: channelId, text: caption };
+  const isHttpPhoto = track.thumbnailUrl && /^https?:\/\//i.test(track.thumbnailUrl);
 
-  const res = await fetch(endpoint, {
+  if (isHttpPhoto) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: channelId, photo: track.thumbnailUrl, caption }),
+      });
+      if (res.ok) return;
+    } catch {
+      // fallback to sendMessage below
+    }
+  }
+
+  // Fallback to text message
+  const textRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ chat_id: channelId, text: caption }),
   });
-  if (!res.ok) {
-    throw new Error(`Telegram API ${res.status}: ${await res.text()}`);
+  if (!textRes.ok) {
+    console.error(`Telegram channel post failed: ${textRes.status} ${await textRes.text()}`);
   }
 }
 

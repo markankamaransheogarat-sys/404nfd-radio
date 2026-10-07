@@ -1,5 +1,5 @@
 import { advanceQueue, API_BASE, getNowPlaying, type NowPlaying } from "../api";
-import { createYoutubeTransport } from "./youtubeTransport";
+import { createHybridTransport } from "./hybridTransport";
 import { staticNoise } from "./staticNoise";
 import type { PlayerState } from "./types";
 
@@ -16,7 +16,7 @@ const DRIFT_THRESHOLD_S = 0.7;
 
 type Mode = "static" | "music";
 
-let transport: ReturnType<typeof createYoutubeTransport> | null = null;
+let transport: ReturnType<typeof createHybridTransport> | null = null;
 let currentTrack: NowPlaying | null = null;
 let mode: Mode = "static";
 let wantsToPlay = false; // true once the user has clicked Play at least once
@@ -145,7 +145,7 @@ export function initPlayer(): void {
     wrapper.appendChild(mount);
   }
 
-  transport = createYoutubeTransport(CONTAINER_ID);
+  transport = createHybridTransport(CONTAINER_ID);
 
   transport.onEnded(() => {
     // currentTrack can still be null right after a fresh page load, before the initial

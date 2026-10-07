@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,13 +22,30 @@ import reactionsRouter from "./routes/reactions.js";
 import reactionsStreamRouter from "./routes/reactionsStream.js";
 import { startRadioClock } from "./services/radioClock.js";
 import { startChannelAnnouncer } from "./services/telegramChannel.js";
+import { startTelegramBot } from "./services/telegramBot.js";
 import { renderIndexHtml } from "./services/ogHtml.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const mediaDir = path.join(__dirname, "..", "..", "media");
+if (!fs.existsSync(mediaDir)) {
+  fs.mkdirSync(mediaDir, { recursive: true });
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve local audio tracks from Google Flow Music with HTTP Range support
+app.use(
+  "/media",
+  express.static(mediaDir, {
+    acceptRanges: true,
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.setHeader("Accept-Ranges", "bytes");
+    },
+  })
+);
 
 app.use("/api/search", searchRouter);
 app.use("/api/now-playing", nowPlayingRouter);
@@ -66,6 +84,7 @@ app.get("*", (req, res, next) => {
 
 startRadioClock();
 startChannelAnnouncer();
+startTelegramBot();
 
 const port = Number(process.env.PORT ?? 8004);
 app.listen(port, "0.0.0.0", () => {
