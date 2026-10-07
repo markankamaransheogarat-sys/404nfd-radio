@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# SQLite & Logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# Backup directories
+backups/
+*.stale-backup*
+*.backup*

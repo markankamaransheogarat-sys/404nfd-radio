@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #000000;
+  --fg: #e8e8e8;
+  --dim: #6b6b6b;
+  --accent: #ff1a2f;
+  --border: #232323;
+}
+
+* {
+  border-radius: 0 !important;
+}
+
+html {
+  /* iOS Safari: keep the fixed player bar / header off the notch & home-indicator area. */
+  padding-top: env(safe-area-inset-top);
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(255, 26, 47, 0.14), transparent 60%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(255, 26, 47, 0.05), transparent 60%);
+  background-attachment: fixed;
+  color: var(--fg);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* One deliberate exception to the sharp-corner rule above: a vinyl record is canonically round
+   — forcing it square would read as a mistake, not a choice. A class selector still beats the
+   universal `*` selector even when both sides carry !important, so this wins cleanly. */
+.vinyl-disc,
+.vinyl-disc img,
+.vinyl-hole {
+  border-radius: 9999px !important;
+}
+.vinyl-grooves {
+  border-radius: 9999px !important;
+  background: repeating-radial-gradient(circle, transparent 0, transparent 3px, rgba(0, 0, 0, 0.35) 4px);
+  mix-blend-mode: multiply;
+}
+
+/* Angular cut-corner panel accent — sharp, not rounded, so it stays on-brand while breaking up
+   the wall of plain rectangles. Two sizes: the default for small chips, -lg for full panels. */
+.notch {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.notch-lg {
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+}
+
+::selection {
+  background: var(--accent);
+  color: #000;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Thin, dark, on-brand — the default scrollbar reads cheap against everything else here. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg);
+}
+
+@keyframes scan {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 4px;
+  }
+}
+
+.scanlines::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 100;
+}
+
+/* Faint film-grain layered on top of the scanlines for texture instead of flat black. Pure CSS,
+   no image request. */
+.scanlines::after {
+  content: "";
+  position: fixed;
+  inset: -100%;
+  width: 300%;
+  height: 300%;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 99;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
