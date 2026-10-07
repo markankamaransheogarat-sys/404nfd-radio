@@ -2,7 +2,9 @@ import { createYoutubeTransport } from "./youtubeTransport";
 import type { PlayerState, PlayerTransport } from "./types";
 
 function isDirectAudio(id: string): boolean {
+  if (!id) return false;
   return (
+    id.startsWith("/audio/") ||
     id.startsWith("/media/") ||
     id.startsWith("http://") ||
     id.startsWith("https://") ||
@@ -12,8 +14,10 @@ function isDirectAudio(id: string): boolean {
 
 export function createHybridTransport(containerId: string): PlayerTransport {
   const yt = createYoutubeTransport(containerId);
-  const audio = new Audio();
+  const audio = document.createElement("audio");
+  audio.style.display = "none";
   audio.preload = "auto";
+  document.body.appendChild(audio);
 
   let activeSource: "none" | "youtube" | "audio" = "none";
   let wantsToPlay = false;
@@ -26,7 +30,7 @@ export function createHybridTransport(containerId: string): PlayerTransport {
   function emitState() {
     const isPlaying =
       activeSource === "audio"
-        ? !audio.paused && !audio.ended && audio.readyState > 2
+        ? !audio.paused && !audio.ended
         : wantsToPlay;
     const isReady =
       activeSource === "audio" ? audio.readyState >= 1 : true;
@@ -54,8 +58,9 @@ export function createHybridTransport(containerId: string): PlayerTransport {
       endedCbs.forEach((cb) => cb());
     }
   });
-  audio.addEventListener("error", () => {
+  audio.addEventListener("error", (e) => {
     if (activeSource === "audio") {
+      console.error("HTML5 Audio playback error:", audio.error, e);
       errorCbs.forEach((cb) => cb("Ошибка воспроизведения аудиофайла"));
     }
   });
@@ -85,18 +90,42 @@ export function createHybridTransport(containerId: string): PlayerTransport {
           yt.pause();
         }
         activeSource = "audio";
-        const url = id.startsWith("/") || id.startsWith("http") ? id : `/${id}`;
+        let url = id.startsWith("/") || id.startsWith("http") ? id : `/${id}`;
+        if (!url.includes("?")) {
+          url += "?v=2";
+        }
+
+        const applySeekAndPlay = () => {
+          if (startSeconds !== undefined && startSeconds > 0) {
+            try {
+              if (audio.duration && startSeconds >= audio.duration) {
+                // Song already finished, advance
+                endedCbs.forEach((cb) => cb());
+                return;
+              }
+              audio.currentTime = startSeconds;
+            } catch (err) {
+              console.warn("Audio seek error:", err);
+            }
+          }
+          if (wantsToPlay) {
+            audio.play().catch((err) => {
+              console.warn("Autoplay audio blocked or pending user gesture:", err);
+            });
+          }
+        };
+
         if (audio.src !== url && !audio.src.endsWith(url)) {
           audio.src = url;
           audio.load();
-        }
-        if (startSeconds !== undefined && startSeconds > 0) {
-          audio.currentTime = startSeconds;
-        }
-        if (wantsToPlay) {
-          audio.play().catch((err) => {
-            console.warn("Autoplay audio blocked or waiting for user interaction:", err);
-          });
+          audio.addEventListener("loadedmetadata", applySeekAndPlay, { once: true });
+          audio.addEventListener("canplay", () => {
+            if (wantsToPlay && audio.paused) {
+              audio.play().catch(() => {});
+            }
+          }, { once: true });
+        } else {
+          applySeekAndPlay();
         }
       } else {
         if (activeSource === "audio") {
@@ -111,7 +140,10 @@ export function createHybridTransport(containerId: string): PlayerTransport {
 
     cueVideoById(id: string) {
       if (isDirectAudio(id)) {
-        const url = id.startsWith("/") || id.startsWith("http") ? id : `/${id}`;
+        let url = id.startsWith("/") || id.startsWith("http") ? id : `/${id}`;
+        if (!url.includes("?")) {
+          url += "?v=2";
+        }
         audio.src = url;
         audio.preload = "auto";
       } else {
@@ -127,6 +159,9 @@ export function createHybridTransport(containerId: string): PlayerTransport {
         });
       } else if (activeSource === "youtube") {
         yt.play();
+      } else {
+        // Unlock audio context on user gesture
+        audio.play().catch(() => {});
       }
       emitState();
     },
@@ -147,7 +182,9 @@ export function createHybridTransport(containerId: string): PlayerTransport {
 
     seek(seconds: number) {
       if (activeSource === "audio") {
-        audio.currentTime = seconds;
+        try {
+          audio.currentTime = seconds;
+        } catch {}
       } else {
         yt.seek(seconds);
       }

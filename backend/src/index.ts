@@ -26,7 +26,8 @@ import { startTelegramBot } from "./services/telegramBot.js";
 import { renderIndexHtml } from "./services/ogHtml.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const mediaDir = path.join(__dirname, "..", "..", "media");
+// Correct path to /root/404nfd-radio/backend/media regardless of running from src or dist
+const mediaDir = path.resolve(__dirname, "..", "media");
 if (!fs.existsSync(mediaDir)) {
   fs.mkdirSync(mediaDir, { recursive: true });
 }
@@ -37,7 +38,7 @@ app.use(express.json());
 
 // Serve local audio tracks from Google Flow Music with HTTP Range support
 app.use(
-  "/media",
+  ["/audio", "/media"],
   express.static(mediaDir, {
     acceptRanges: true,
     setHeaders: (res) => {
@@ -71,7 +72,7 @@ const indexHtmlPath = path.join(frontendDist, "index.html");
 // tags, so static() must not auto-serve it for "/" before the catch-all gets a chance.
 app.use(express.static(frontendDist, { index: false }));
 app.get("*", (req, res, next) => {
-  if (req.path.startsWith("/api/")) {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/media/")) {
     next();
     return;
   }

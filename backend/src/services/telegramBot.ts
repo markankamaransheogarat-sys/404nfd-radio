@@ -129,7 +129,7 @@ async function handleAudioMessage(botToken: string, msg: any): Promise<void> {
     title = parts.slice(1).join(" - ").trim();
   }
 
-  const videoId = `/media/${uniqueName}`;
+  const videoId = `/audio/${uniqueName}`;
 
   // 4. Save to library_tracks
   db.prepare(

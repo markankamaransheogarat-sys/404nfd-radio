@@ -205,6 +205,7 @@ export const player = {
   play() {
     wantsToPlay = true;
     notifyPlaying();
+    transport?.play();
     void getNowPlaying().then((track) => {
       if (!wantsToPlay) return; // paused again before this resolved
       const elapsed = track ? Math.max(0, (Date.now() - new Date(track.startedAt).getTime()) / 1000) : undefined;
