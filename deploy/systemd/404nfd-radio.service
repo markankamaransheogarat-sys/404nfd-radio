@@ -1,0 +1,13 @@
+[Unit]
+Description=404nfd Radio backend (serves API + built frontend SPA)
+After=network.target
+
+[Service]
+WorkingDirectory=/root/404nfd-radio/backend
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

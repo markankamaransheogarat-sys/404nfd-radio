@@ -154,9 +154,13 @@ export function createHybridTransport(containerId: string): PlayerTransport {
     play() {
       wantsToPlay = true;
       if (activeSource === "audio") {
-        audio.play().catch((err) => {
-          console.warn("Audio play prevented:", err);
-        });
+        // Only call play() if audio is actually paused — calling it when already playing
+        // causes a micro-stutter because the browser internally suspends and re-syncs the buffer.
+        if (audio.paused || audio.ended) {
+          audio.play().catch((err) => {
+            console.warn("Audio play prevented:", err);
+          });
+        }
       } else if (activeSource === "youtube") {
         yt.play();
       } else {

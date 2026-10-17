@@ -11,8 +11,8 @@ const CONTAINER_ID = "yt-player"; // owned by us — created imperatively inside
 const POLL_INTERVAL_MS = 15_000;
 // How often to check this listener's own playback position against the server's broadcast
 // clock, and how far off it has to drift before we yank it back in line.
-const DRIFT_CHECK_MS = 2000;
-const DRIFT_THRESHOLD_S = 0.7;
+const DRIFT_CHECK_MS = 3000;
+const DRIFT_THRESHOLD_S = 4.0;
 
 type Mode = "static" | "music";
 
@@ -69,13 +69,16 @@ function updateMediaSession(track: NowPlaying | null): void {
   navigator.mediaSession.playbackState = wantsToPlay ? "playing" : "paused";
 }
 
-function adoptTrack(track: NowPlaying | null, seekTo?: number): void {
+function adoptTrack(track: NowPlaying | null, seekTo?: number, forceReload = false): void {
+  const isSameTrack = currentTrack?.videoId === track?.videoId;
   currentTrack = track;
   errorRetryCount = 0;
   notifyTrack();
   if (track) {
     setMode("music");
-    transport?.loadVideoById(track.videoId, seekTo);
+    if (!isSameTrack || forceReload) {
+      transport?.loadVideoById(track.videoId, seekTo);
+    }
   } else {
     setMode("static");
   }
@@ -186,12 +189,23 @@ export function initPlayer(): void {
     navigator.mediaSession.setActionHandler("pause", () => player.pause());
   }
 
-  // Mobile browsers commonly suspend YouTube's iframe when the tab/app is backgrounded, even
-  // with a media session — there's no page-level API to prevent that, YouTube's player decides
-  // on its own. The best we can do is snap straight back to the live position the moment the
-  // listener returns, instead of leaving them stuck on "paused" until they notice and tap Play.
+  // Mobile browsers can suspend audio when the tab is backgrounded. On return:
+  // - For HTML5 audio: if it's still playing (desktop Chrome/Firefox keep it alive), do nothing.
+  //   Only intervene if it actually paused, to avoid a micro-stutter from calling play() on
+  //   a running element.
+  // - For YouTube: always snap back to live position since YT iframe suspends itself on iOS.
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && wantsToPlay) {
+    if (document.visibilityState !== "visible" || !wantsToPlay) return;
+    if (!transport) return;
+    const alreadyPlaying = transport.getCurrentTime() > 0 && !transport.getDuration
+      ? false
+      : mode === "music" && transport.getCurrentTime() > 0;
+
+    if (alreadyPlaying) {
+      // Audio is still running — only do a soft drift correction, not a full play() call
+      correctDrift();
+    } else {
+      // Audio was actually suspended (e.g. iOS, YouTube iframe) — recover fully
       player.play();
     }
   });

@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  radio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 404nfd-radio
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8004}:8004"
+    env_file:
+      - .env
+    environment:
+      PORT: 8004
+      DB_PATH: /app/data/radio.db
+    volumes:
+      - ./backend/media:/app/backend/media
+      - radio-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  radio-data:
